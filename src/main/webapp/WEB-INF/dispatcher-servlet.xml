@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='UTF-8' ?>
+<!-- was: <?xml version="1.0" encoding="UTF-8"?> -->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="
+       http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+       http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+       http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+       http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd
+       http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd
+       http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security.xsd">
+
+    	<!-- Getting Database properties -->
+        <context:property-placeholder location="WEB-INF/application.properties" />
+        
+        <!-- Cors para el cliente -->
+        <mvc:cors>
+            <mvc:mapping path="/**" allowed-headers="*" allowed-methods="*" allowed-origins="*" />
+        </mvc:cors>
+        
+        <!-- Specifying base package of the Components like Controller, Service, DAO -->
+	<context:component-scan base-package="com.produccion." />
+	<mvc:annotation-driven />
+	<!-- View Resolver -->
+	<bean
+		class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/jsp/" />
+		<property name="suffix" value=".jsp" />
+	</bean>
+        <mvc:resources mapping="/resources/**" location="/resources/"/>
+
+	<!-- DataSource -->
+	<bean class="org.springframework.jdbc.datasource.DriverManagerDataSource"
+		id="dataSource">
+		<property name="driverClassName" value="${database.driver}"></property>
+		<property name="url" value="${database.url}"></property>
+		<property name="username" value="${database.user}"></property>
+		<property name="password" value="${database.password}"></property>
+	</bean>
+
+	<!-- Hibernate SessionFactory -->
+	<bean   id="sessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="packagesToScan" value="com.produccion.entities"></property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>
+				<prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- Transaction -->
+	<bean id="transactionManager"
+		class="org.springframework.orm.hibernate5.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+        
+        <tx:annotation-driven transaction-manager="transactionManager" />
+        
+        <!-- Spring security -->
+        <bean id="authenticationEntryPoint" class="com.produccion.security.RestAuthenticationEntryPoint" />
+        <bean id="monitoringFilter" class="com.produccion.security.MonitoringFilter" />
+        
+        <security:http entry-point-ref="authenticationEntryPoint" auto-config="true" create-session="stateless">
+            <security:csrf disabled="true"/>
+            <security:custom-filter ref="monitoringFilter" position="PRE_AUTH_FILTER" />
+            <security:intercept-url pattern="/**" access="permitAll"/>
+        </security:http>
+        
+        <security:authentication-manager />
+</beans>
